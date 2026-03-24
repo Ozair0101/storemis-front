@@ -1,0 +1,450 @@
+import { useState, useEffect, useCallback } from 'react';
+import api from '../api/axios';
+import toast from 'react-hot-toast';
+
+interface Account {
+  id: number;
+  name: string;
+  type: 'cash' | 'bank' | 'mobile wallet';
+  currency: 'AFN' | 'USD';
+  balance: number;
+}
+
+interface Transaction {
+  id: number;
+  amount: number;
+  type: 'income' | 'expense';
+  reference: string;
+  date: string;
+}
+
+interface AccountForm {
+  name: string;
+  type: string;
+  currency: string;
+  balance: number;
+}
+
+const emptyForm: AccountForm = {
+  name: '',
+  type: 'cash',
+  currency: 'AFN',
+  balance: 0,
+};
+
+const typeLabels: Record<string, string> = {
+  cash: 'نقدی',
+  bank: 'بانکی',
+  'mobile wallet': 'کیف پول موبایل',
+};
+
+const typeColors: Record<string, string> = {
+  cash: 'bg-green-100 text-green-700',
+  bank: 'bg-blue-100 text-blue-700',
+  'mobile wallet': 'bg-purple-100 text-purple-700',
+};
+
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat('fa-AF', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+  }).format(amount) + ` ${currency}`;
+}
+
+export default function AccountsPage() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [editing, setEditing] = useState<Account | null>(null);
+  const [deleting, setDeleting] = useState<Account | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [form, setForm] = useState<AccountForm>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchAccounts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/accounts');
+      setAccounts(res.data);
+    } catch {
+      toast.error('خطا در بارگذاری حساب‌ها');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+
+  const fetchTransactions = async (account: Account) => {
+    setSelectedAccount(account);
+    setShowTransactions(true);
+    setLoadingTransactions(true);
+    try {
+      const res = await api.get(`/accounts/${account.id}/transactions`);
+      setTransactions(res.data);
+    } catch {
+      toast.error('خطا در بارگذاری تراکنش‌ها');
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEdit = (acc: Account, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditing(acc);
+    setForm({
+      name: acc.name,
+      type: acc.type,
+      currency: acc.currency,
+      balance: acc.balance,
+    });
+    setShowModal(true);
+  };
+
+  const openDelete = (acc: Account, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleting(acc);
+    setShowDeleteModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error('نام حساب الزامی است');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editing) {
+        await api.put(`/accounts/${editing.id}`, form);
+        toast.success('حساب با موفقیت ویرایش شد');
+      } else {
+        await api.post('/accounts', form);
+        toast.success('حساب با موفقیت اضافه شد');
+      }
+      setShowModal(false);
+      fetchAccounts();
+    } catch {
+      toast.error('خطا در ذخیره‌سازی');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setSubmitting(true);
+    try {
+      await api.delete(`/accounts/${deleting.id}`);
+      toast.success('حساب با موفقیت حذف شد');
+      setShowDeleteModal(false);
+      setDeleting(null);
+      fetchAccounts();
+    } catch {
+      toast.error('خطا در حذف حساب');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">حساب‌ها</h1>
+        <button
+          onClick={openAdd}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          افزودن حساب
+        </button>
+      </div>
+
+      {/* Account Cards */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-20 text-center text-slate-500">
+          هیچ حسابی یافت نشد
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {accounts.map((acc) => (
+            <div
+              key={acc.id}
+              onClick={() => fetchTransactions(acc)}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all group"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center">
+                    {acc.type === 'cash' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {acc.type === 'bank' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {acc.type === 'mobile wallet' && (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-lg">{acc.name}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${typeColors[acc.type] || 'bg-gray-100 text-gray-700'}`}>
+                      {typeLabels[acc.type] || acc.type}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => openEdit(acc, e)}
+                    className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                    title="ویرایش"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={(e) => openDelete(acc, e)}
+                    className="text-red-600 hover:text-red-800 transition-colors p-1"
+                    title="حذف"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-sm text-slate-500 mb-1">موجودی</p>
+                <p className="text-2xl font-bold text-slate-800">{formatCurrency(acc.balance, acc.currency)}</p>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs text-slate-400">
+                <span>ارز: {acc.currency}</span>
+                <span className="mx-1">|</span>
+                <span>کلیک برای مشاهده تراکنش‌ها</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Transactions Modal */}
+      {showTransactions && selectedAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowTransactions(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">تراکنش‌های {selectedAccount.name}</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  موجودی: {formatCurrency(selectedAccount.balance, selectedAccount.currency)}
+                </p>
+              </div>
+              <button onClick={() => setShowTransactions(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {loadingTransactions ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-20 text-slate-500">هیچ تراکنشی یافت نشد</div>
+              ) : (
+                <table className="w-full">
+                  <thead className="sticky top-0">
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">مبلغ</th>
+                      <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">نوع</th>
+                      <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">مرجع</th>
+                      <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">تاریخ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-800">
+                          {formatCurrency(tx.amount, selectedAccount.currency)}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {tx.type === 'income' ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">درآمد</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">مصرف</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{tx.reference || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {tx.date ? new Date(tx.date).toLocaleDateString('fa-AF') : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Account Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowModal(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-800">
+                {editing ? 'ویرایش حساب' : 'افزودن حساب'}
+              </h2>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">نام حساب *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="نام حساب"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">نوع حساب</label>
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="cash">نقدی</option>
+                    <option value="bank">بانکی</option>
+                    <option value="mobile wallet">کیف پول موبایل</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">ارز</label>
+                  <select
+                    value={form.currency}
+                    onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="AFN">AFN - افغانی</option>
+                    <option value="USD">USD - دالر</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">موجودی اولیه</label>
+                <input
+                  type="number"
+                  value={form.balance || ''}
+                  onChange={(e) => setForm({ ...form, balance: Number(e.target.value) })}
+                  className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  dir="ltr"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? 'در حال ذخیره...' : editing ? 'ویرایش' : 'ذخیره'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  انصراف
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDeleteModal(false)}>
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-800">تایید حذف</h2>
+              <button onClick={() => setShowDeleteModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 mb-6">
+                آیا مطمئن هستید که می‌خواهید حساب <span className="font-bold text-slate-800">{deleting.name}</span> را حذف کنید؟
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={submitting}
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? 'در حال حذف...' : 'حذف'}
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  انصراف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
