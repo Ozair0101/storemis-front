@@ -68,7 +68,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 right-0 h-full w-64 bg-slate-800 text-white z-50
+          fixed top-0 right-0 min-h-screen w-64 bg-slate-800 text-white z-50
           transform transition-transform duration-300 ease-in-out
           lg:translate-x-0 lg:static lg:z-auto
           ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
