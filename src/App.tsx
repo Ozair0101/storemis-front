@@ -14,6 +14,7 @@ import CustomersPage from './pages/CustomersPage';
 import CustomerFormPage from './pages/CustomerFormPage';
 import PurchasesPage from './pages/PurchasesPage';
 import SalesPage from './pages/SalesPage';
+import SaleDetailPage from './pages/SaleDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ExpenseFormPage from './pages/ExpenseFormPage';
 import AccountsPage from './pages/AccountsPage';
@@ -57,6 +58,7 @@ export default function App() {
 
         <Route path="/purchases"                 element={<PL><PurchasesPage /></PL>} />
         <Route path="/sales"                     element={<PL><SalesPage /></PL>} />
+        <Route path="/sales/:id"                 element={<PL><SaleDetailPage /></PL>} />
 
         <Route path="/expenses"                  element={<PL><ExpensesPage /></PL>} />
         <Route path="/expenses/new"              element={<PL><ExpenseFormPage /></PL>} />
