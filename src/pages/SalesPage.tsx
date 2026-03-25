@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import {
@@ -9,6 +10,7 @@ import {
   FiX,
   FiShoppingCart,
   FiList,
+  FiEye,
 } from 'react-icons/fi';
 
 /* ───────── Types ───────── */
@@ -489,14 +491,11 @@ function POSView() {
    Sales List View
    ═══════════════════════════════════════════════════════ */
 function SalesListView() {
+  const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detail, setDetail] = useState<SaleDetail | null>(null);
-  const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    fetchSales();
-  }, []);
+  useEffect(() => { fetchSales(); }, []);
 
   const fetchSales = async () => {
     setLoading(true);
@@ -507,16 +506,6 @@ function SalesListView() {
       toast.error('خطا در دریافت لیست فروش‌ها');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const viewDetail = async (id: number) => {
-    try {
-      const { data } = await api.get(`/sales/${id}`);
-      setDetail(data);
-      setShowModal(true);
-    } catch {
-      toast.error('خطا در دریافت جزئیات فروش');
     }
   };
 
@@ -540,30 +529,30 @@ function SalesListView() {
                   <th className="px-4 py-3 text-center font-medium">نوع پرداخت</th>
                   <th className="px-4 py-3 text-center font-medium">وضعیت</th>
                   <th className="px-4 py-3 text-center font-medium">تاریخ</th>
+                  <th className="px-4 py-3 text-center font-medium">جزئیات</th>
                 </tr>
               </thead>
               <tbody>
                 {sales.map((s) => (
-                  <tr
-                    key={s.sale_id}
-                    onClick={() => viewDetail(s.sale_id)}
-                    className="border-b last:border-0 hover:bg-blue-50 cursor-pointer transition"
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-700">{s.invoice_number}</td>
+                  <tr key={s.sale_id} className="border-b last:border-0 hover:bg-slate-50 transition">
+                    <td className="px-4 py-3 font-medium text-slate-700">{s.invoice_number || `#${s.sale_id}`}</td>
                     <td className="px-4 py-3 text-slate-600">{s.customer_name || '---'}</td>
-                    <td className="px-4 py-3 text-center font-semibold">
-                      {formatNumber(s.total_amount)}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-500">
-                      {formatNumber(s.discount_amount)}
-                    </td>
+                    <td className="px-4 py-3 text-center font-semibold">{formatNumber(s.total_amount)}</td>
+                    <td className="px-4 py-3 text-center text-slate-500">{formatNumber(s.discount_amount)}</td>
                     <td className="px-4 py-3 text-center">{formatNumber(s.paid_amount)}</td>
-                    <td className="px-4 py-3 text-center">
-                      {paymentLabel[s.payment_type] ?? s.payment_type}
-                    </td>
+                    <td className="px-4 py-3 text-center">{paymentLabel[s.payment_type] ?? s.payment_type}</td>
                     <td className="px-4 py-3 text-center">{statusBadge(s.status)}</td>
                     <td className="px-4 py-3 text-center text-slate-500 text-xs">
                       {new Date(s.date).toLocaleDateString('fa-AF')}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => navigate(`/sales/${s.sale_id}`)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <FiEye className="w-3.5 h-3.5" />
+                        مشاهده
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -573,91 +562,6 @@ function SalesListView() {
         )}
       </div>
 
-      {/* Detail modal */}
-      {showModal && detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
-          <div
-            dir="rtl"
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-800">
-                جزئیات فروش - {detail.invoice_number}
-              </h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <FiX size={20} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              {/* Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <span className="text-slate-500">مشتری</span>
-                  <p className="font-medium">{detail.customer_name || '---'}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">فروشنده</span>
-                  <p className="font-medium">{detail.user_name}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">نوع پرداخت</span>
-                  <p className="font-medium">{paymentLabel[detail.payment_type] ?? detail.payment_type}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">وضعیت</span>
-                  <p className="mt-0.5">{statusBadge(detail.status)}</p>
-                </div>
-              </div>
-
-              {/* Items table */}
-              <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-4 py-2 text-right font-medium text-slate-600">محصول</th>
-                      <th className="px-4 py-2 text-center font-medium text-slate-600">تعداد</th>
-                      <th className="px-4 py-2 text-center font-medium text-slate-600">قیمت واحد</th>
-                      <th className="px-4 py-2 text-center font-medium text-slate-600">مجموع</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.items?.map((item, idx) => (
-                      <tr key={idx} className="border-b last:border-0">
-                        <td className="px-4 py-2.5">{item.product_name}</td>
-                        <td className="px-4 py-2.5 text-center">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-center">{formatNumber(item.unit_price)}</td>
-                        <td className="px-4 py-2.5 text-center font-semibold">
-                          {formatNumber(item.total)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">مبلغ کل</span>
-                  <span className="font-semibold">{formatNumber(detail.total_amount)} افغانی</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">تخفیف</span>
-                  <span className="font-semibold text-orange-600">
-                    {formatNumber(detail.discount_amount)} افغانی
-                  </span>
-                </div>
-                <div className="flex justify-between text-base font-bold border-t border-slate-200 pt-2">
-                  <span>پرداخت شده</span>
-                  <span className="text-green-700">{formatNumber(detail.paid_amount)} افغانی</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
