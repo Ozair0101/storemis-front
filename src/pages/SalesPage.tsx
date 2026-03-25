@@ -164,7 +164,13 @@ function POSView() {
     if (!barcode.trim()) return;
     try {
       const { data } = await api.get(`/products/barcode/${barcode.trim()}`);
-      addToCart(data);
+      addToCart({
+        product_id: data.product_id,
+        name: data.name,
+        price: parseFloat(data.sale_price ?? data.price ?? 0),
+        stock: data.stock_quantity ?? data.stock ?? 0,
+        barcode: data.barcode,
+      });
       setBarcode('');
     } catch {
       toast.error('محصول با این بارکد یافت نشد');
@@ -184,7 +190,14 @@ function POSView() {
     searchTimeout.current = setTimeout(async () => {
       try {
         const { data } = await api.get('/products', { params: { search: term } });
-        const list = Array.isArray(data) ? data : data.data ?? [];
+        const raw = Array.isArray(data) ? data : data.data ?? [];
+        const list = raw.map((p: any) => ({
+          product_id: p.product_id,
+          name: p.name,
+          price: parseFloat(p.sale_price ?? p.price ?? 0),
+          stock: p.stock_quantity ?? p.stock ?? 0,
+          barcode: p.barcode,
+        }));
         setSearchResults(list);
         setShowDropdown(list.length > 0);
       } catch {
