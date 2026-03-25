@@ -4,8 +4,8 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
-interface Account { id: number; name: string; type: string; currency: string; balance: number; }
-interface Transaction { id: number; amount: number; type: string; reference: string; date: string; }
+interface Account { account_id: number; name: string; type: string; currency: string; balance: number; }
+interface Transaction { transaction_id: number; amount: number; type: string; reference: string; date: string; }
 
 const typeLabels: Record<string, string> = { cash: 'نقدی', bank: 'بانکی', 'mobile wallet': 'کیف پول موبایل' };
 const typeColors: Record<string, string> = {
@@ -43,7 +43,7 @@ export default function AccountsPage() {
     setSelectedAccount(acc);
     setLoadingTx(true);
     try {
-      const res = await api.get(`/accounts/${acc.id}/transactions`);
+      const res = await api.get(`/accounts/${acc.account_id}/transactions`);
       setTransactions(res.data);
     } catch { toast.error('خطا در بارگذاری تراکنش‌ها'); }
     finally  { setLoadingTx(false); }
@@ -53,7 +53,7 @@ export default function AccountsPage() {
     if (!deleting) return;
     setSubmitting(true);
     try {
-      await api.delete(`/accounts/${deleting.id}`);
+      await api.delete(`/accounts/${deleting.account_id}`);
       toast.success('حساب حذف شد');
       setDeleting(null);
       fetchAccounts();
@@ -82,7 +82,7 @@ export default function AccountsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(acc => (
-            <div key={acc.id} onClick={() => openTransactions(acc)}
+            <div key={acc.account_id} onClick={() => openTransactions(acc)}
               className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 cursor-pointer hover:shadow-md hover:border-blue-300 transition-all group">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -97,7 +97,7 @@ export default function AccountsPage() {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={e => { e.stopPropagation(); navigate(`/accounts/${acc.id}/edit`); }}
+                  <button onClick={e => { e.stopPropagation(); navigate(`/accounts/${acc.account_id}/edit`); }}
                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                     <FiEdit2 className="w-4 h-4" />
                   </button>
@@ -147,7 +147,7 @@ export default function AccountsPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {transactions.map(tx => (
-                      <tr key={tx.id} className="hover:bg-slate-50">
+                      <tr key={tx.transaction_id} className="hover:bg-slate-50">
                         <td className="px-6 py-4 font-medium text-slate-800">{formatCurrency(tx.amount, selectedAccount.currency)}</td>
                         <td className="px-6 py-4">
                           {tx.type === 'income'

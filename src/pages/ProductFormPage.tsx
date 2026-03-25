@@ -18,7 +18,7 @@ const emptyForm: ProductForm = {
   purchase_price: '', sale_price: '', stock_quantity: '', unit: 'عدد',
 };
 
-const unitOptions = ['عدد', 'کیلوگرام', 'لیتر', 'بسته', 'متر'];
+const unitOptions = ['عدد', 'کیلوگرام', 'لیتر', 'کارتن', 'متر'];
 
 const inputCls = 'w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
