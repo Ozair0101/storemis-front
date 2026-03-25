@@ -117,7 +117,7 @@ export default function SaleDetailPage() {
             <div>
               <p className="text-xs text-slate-400">نام مشتری</p>
               <p className="text-base font-semibold text-slate-800 mt-0.5">
-                {sale.customer_name || <span className="text-slate-400 font-normal">بدون مشتری</span>}
+                {sale.customer_name || <span className="text-slate-400 font-normal">مشتری حضوری</span>}
               </p>
             </div>
             <div>

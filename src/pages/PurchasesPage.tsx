@@ -174,7 +174,7 @@ export default function PurchasesPage() {
                             e.stopPropagation();
                             viewDetail(p.purchase_id);
                           }}
-                          className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50"
+                          className="p-1.5 rounded-md cursor-pointer text-blue-600 hover:bg-blue-50"
                           title="مشاهده"
                         >
                           <FiEye size={15} />
@@ -182,7 +182,7 @@ export default function PurchasesPage() {
                         {p.status !== 'completed' && (
                           <button
                             onClick={(e) => openPaymentModal(p, e)}
-                            className="p-1.5 rounded-md text-green-600 hover:bg-green-50"
+                            className="p-1.5 rounded-md cursor-pointer text-green-600 hover:bg-green-50"
                             title="ثبت پرداخت"
                           >
                             <FiDollarSign size={15} />
