@@ -1,182 +1,70 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 interface Expense {
-  id: number;
-  description: string;
-  amount: number;
-  category: string;
-  payment_type: string;
-  date: string;
+  id: number; description: string; amount: number;
+  category: string; payment_type: string; date: string;
 }
-
-interface ExpenseForm {
-  description: string;
-  amount: number;
-  category: string;
-  payment_type: string;
-  date: string;
-}
-
-const emptyForm: ExpenseForm = {
-  description: '',
-  amount: 0,
-  category: 'misc',
-  payment_type: 'cash',
-  date: new Date().toISOString().split('T')[0],
-};
-
-const categoryOptions = [
-  { value: 'rent', label: 'کرایه' },
-  { value: 'utilities', label: 'برق و آب' },
-  { value: 'salaries', label: 'معاشات' },
-  { value: 'transport', label: 'ترانسپورت' },
-  { value: 'misc', label: 'متفرقه' },
-];
 
 const categoryLabels: Record<string, string> = {
-  rent: 'کرایه',
-  utilities: 'برق و آب',
-  salaries: 'معاشات',
-  transport: 'ترانسپورت',
-  misc: 'متفرقه',
+  rent: 'کرایه', utilities: 'برق و آب', salaries: 'معاشات',
+  transport: 'ترانسپورت', misc: 'متفرقه',
 };
+const paymentTypeLabels: Record<string, string> = { cash: 'نقدی', bank: 'بانکی', mobile: 'موبایل' };
 
-const paymentTypeLabels: Record<string, string> = {
-  cash: 'نقدی',
-  bank: 'بانکی',
-  mobile: 'موبایل',
-};
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('fa-AF', {
-    style: 'decimal',
-    minimumFractionDigits: 0,
-  }).format(amount) + ' AFN';
+function formatCurrency(n: number): string {
+  return new Intl.NumberFormat('fa-AF').format(n) + ' AFN';
 }
 
 export default function ExpensesPage() {
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editing, setEditing] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState<Expense | null>(null);
-  const [form, setForm] = useState<ExpenseForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
-  const totalExpenses = useMemo(() => {
-    return expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  }, [expenses]);
+  const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount), 0), [expenses]);
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpenses = async () => {
     try {
       setLoading(true);
       const res = await api.get('/expenses');
       setExpenses(res.data);
-    } catch {
-      toast.error('خطا در بارگذاری مصارف');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
-
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setShowModal(true);
+    } catch { toast.error('خطا در بارگذاری مصارف'); }
+    finally  { setLoading(false); }
   };
 
-  const openEdit = (exp: Expense) => {
-    setEditing(exp);
-    setForm({
-      description: exp.description,
-      amount: exp.amount,
-      category: exp.category,
-      payment_type: exp.payment_type,
-      date: exp.date ? exp.date.split('T')[0] : '',
-    });
-    setShowModal(true);
-  };
-
-  const openDelete = (exp: Expense) => {
-    setDeleting(exp);
-    setShowDeleteModal(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.description.trim()) {
-      toast.error('توضیحات الزامی است');
-      return;
-    }
-    if (!form.amount || form.amount <= 0) {
-      toast.error('مبلغ باید بزرگتر از صفر باشد');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      if (editing) {
-        await api.put(`/expenses/${editing.id}`, form);
-        toast.success('مصرف با موفقیت ویرایش شد');
-      } else {
-        await api.post('/expenses', form);
-        toast.success('مصرف با موفقیت اضافه شد');
-      }
-      setShowModal(false);
-      fetchExpenses();
-    } catch {
-      toast.error('خطا در ذخیره‌سازی');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  useEffect(() => { fetchExpenses(); }, []);
 
   const handleDelete = async () => {
     if (!deleting) return;
     setSubmitting(true);
     try {
       await api.delete(`/expenses/${deleting.id}`);
-      toast.success('مصرف با موفقیت حذف شد');
-      setShowDeleteModal(false);
+      toast.success('مصرف حذف شد');
       setDeleting(null);
       fetchExpenses();
-    } catch {
-      toast.error('خطا در حذف مصرف');
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { toast.error('خطا در حذف مصرف'); }
+    finally  { setSubmitting(false); }
   };
 
   return (
     <div dir="rtl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">مصارف</h1>
-        <button
-          onClick={openAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          افزودن مصرف
+        <button onClick={() => navigate('/expenses/new')}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm font-medium">
+          <FiPlus className="w-4 h-4" /> افزودن مصرف
         </button>
       </div>
 
-      {/* Total Expenses Summary Card */}
+      {/* Summary Card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-          </div>
+          <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center text-red-600 text-xl">💸</div>
           <div>
             <p className="text-sm text-slate-500">مجموع مصارف</p>
             <p className="text-2xl font-bold text-slate-800">{formatCurrency(totalExpenses)}</p>
@@ -184,65 +72,50 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-20 text-slate-500">هیچ مصرفی یافت نشد</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">توضیحات</th>
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">مبلغ</th>
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">دسته‌بندی</th>
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">نوع پرداخت</th>
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">تاریخ</th>
-                  <th className="text-right text-xs font-medium text-slate-600 uppercase tracking-wider px-6 py-3">عملیات</th>
+                  {['توضیحات','مبلغ','دسته‌بندی','نوع پرداخت','تاریخ','عملیات'].map(h => (
+                    <th key={h} className="text-right px-6 py-3 text-xs font-medium text-slate-600">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {expenses.map((exp) => (
+                {expenses.map(exp => (
                   <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-slate-800 font-medium">{exp.description}</td>
-                    <td className="px-6 py-4 text-sm text-slate-800 font-medium">{formatCurrency(exp.amount)}</td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-6 py-4 font-medium text-slate-800">{exp.description}</td>
+                    <td className="px-6 py-4 font-medium text-slate-800">{formatCurrency(exp.amount)}</td>
+                    <td className="px-6 py-4">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                         {categoryLabels[exp.category] || exp.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-6 py-4">
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                         {paymentTypeLabels[exp.payment_type] || exp.payment_type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {exp.date ? new Date(exp.date).toLocaleDateString('fa-AF') : '-'}
+                    <td className="px-6 py-4 text-slate-600">
+                      {exp.date ? new Date(exp.date).toLocaleDateString('fa-AF') : '—'}
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openEdit(exp)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors p-1"
-                          title="ویرایش"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                            <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
-                          </svg>
+                        <button onClick={() => navigate(`/expenses/${exp.id}/edit`)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <FiEdit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => openDelete(exp)}
-                          className="text-red-600 hover:text-red-800 transition-colors p-1"
-                          title="حذف"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
+                        <button onClick={() => setDeleting(exp)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <FiTrash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -254,141 +127,23 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowModal(false)}>
-          <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-            dir="rtl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-800">
-                {editing ? 'ویرایش مصرف' : 'افزودن مصرف'}
-              </h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setDeleting(null)} />
+          <div dir="rtl" className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">تایید حذف</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              آیا مطمئن هستید که می‌خواهید مصرف <span className="font-bold">"{deleting.description}"</span> را حذف کنید؟
+            </p>
+            <div className="flex gap-3">
+              <button onClick={handleDelete} disabled={submitting}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium">
+                {submitting ? 'در حال حذف...' : 'حذف'}
               </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">توضیحات *</label>
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  placeholder="توضیحات مصرف"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">مبلغ (AFN) *</label>
-                  <input
-                    type="number"
-                    value={form.amount || ''}
-                    onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    dir="ltr"
-                    placeholder="0"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">دسته‌بندی</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  >
-                    {categoryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">نوع پرداخت</label>
-                  <select
-                    value={form.payment_type}
-                    onChange={(e) => setForm({ ...form, payment_type: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  >
-                    <option value="cash">نقدی</option>
-                    <option value="bank">بانکی</option>
-                    <option value="mobile">موبایل</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">تاریخ</label>
-                  <input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    dir="ltr"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'در حال ذخیره...' : editing ? 'ویرایش' : 'ذخیره'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  انصراف
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && deleting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDeleteModal(false)}>
-          <div
-            className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4"
-            dir="rtl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-800">تایید حذف</h2>
-              <button onClick={() => setShowDeleteModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+              <button onClick={() => setDeleting(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-lg text-sm font-medium">
+                انصراف
               </button>
-            </div>
-            <div className="p-6">
-              <p className="text-slate-600 mb-6">
-                آیا مطمئن هستید که می‌خواهید مصرف <span className="font-bold text-slate-800">{deleting.description}</span> را حذف کنید؟
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleDelete}
-                  disabled={submitting}
-                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'در حال حذف...' : 'حذف'}
-                </button>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  انصراف
-                </button>
-              </div>
             </div>
           </div>
         </div>
