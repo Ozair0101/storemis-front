@@ -123,8 +123,8 @@ export default function AccountsPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
             dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">تراکنش‌های {selectedAccount.name}</h2>
+              <div> 
+                <h2 className="text-lg font-bold text-slate-800">معاملات {selectedAccount.name}</h2>
                 <p className="text-sm text-slate-500 mt-1">موجودی: {formatCurrency(selectedAccount.balance, selectedAccount.currency)}</p>
               </div>
               <button onClick={() => setSelectedAccount(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">✕</button>
@@ -135,7 +135,7 @@ export default function AccountsPage() {
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : transactions.length === 0 ? (
-                <div className="text-center py-20 text-slate-500">هیچ تراکنشی یافت نشد</div>
+                <div className="text-center py-20 text-slate-500">هیچ معامله یافت نشد</div>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="sticky top-0">
