@@ -17,6 +17,7 @@ import {
   HiOutlineLogout,
   HiOutlineMenu,
   HiOutlineX,
+  HiOutlineSwitchHorizontal,
 } from 'react-icons/hi';
 
 interface LayoutProps {
@@ -32,6 +33,7 @@ const navItems = [
   { path: '/purchases', label: 'خریدها', icon: HiOutlineShoppingCart },
   { path: '/sales', label: 'فروش', icon: HiOutlineCash },
   { path: '/expenses', label: 'مصارف', icon: HiOutlineCreditCard },
+  { path: '/sarafis', label: 'صرافی\u200Cها', icon: HiOutlineSwitchHorizontal },
   { path: '/accounts', label: 'حساب\u200Cها', icon: HiOutlineCalculator },
   { path: '/employees', label: 'کارمندان', icon: HiOutlineUserGroup },
   { path: '/reports', label: 'گزارشات', icon: HiOutlineChartBar },
