@@ -55,8 +55,8 @@ const navigation: NavEntry[] = [
   { type: 'group', group: {
     key: 'inventory', label: 'انبار و محصولات', icon: HiOutlineCube,
     items: [
-      { path: '/products', label: 'محصولات', icon: HiOutlineCube },
       { path: '/categories', label: 'دسته\u200Cبندی\u200Cها', icon: HiOutlineTag },
+      { path: '/products', label: 'محصولات', icon: HiOutlineCube },
     ],
   }},
 
@@ -83,9 +83,6 @@ const navigation: NavEntry[] = [
     ],
   }},
 
-  // HR
-  { type: 'link', item: { path: '/employees', label: 'کارمندان', icon: HiOutlineUserGroup } },
-
   // Reports & Settings
   { type: 'group', group: {
     key: 'settings', label: 'گزارشات و تنظیمات', icon: HiOutlineCog,
@@ -94,6 +91,9 @@ const navigation: NavEntry[] = [
       { path: '/users', label: 'کاربران', icon: HiOutlineShieldCheck },
     ],
   }},
+  // HR
+  { type: 'link', item: { path: '/employees', label: 'کارمندان', icon: HiOutlineUserGroup } },
+
 ];
 
 /* ─── Collapsible Group Component ─── */
