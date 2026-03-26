@@ -138,8 +138,11 @@ function POSView() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
+  const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
   const [customerId, setCustomerId] = useState<number | ''>('');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'sarafi'>('account');
   const [accountId, setAccountId] = useState<number | ''>('');
+  const [sarafiId, setSarafiId] = useState<number | ''>('');
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -153,6 +156,7 @@ function POSView() {
       setAccounts(r.data);
       if (r.data.length > 0) setAccountId(r.data[0].account_id);
     }).catch(() => {});
+    api.get('/sarafis').then((r) => setSarafis(r.data)).catch(() => {});
   }, []);
 
   /* close dropdown on outside click */
@@ -252,8 +256,9 @@ function POSView() {
       const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.post('/sales', {
         customer_id: customerId || null,
-        payment_type: selectedAccount?.type || 'cash',
-        account_id: accountId || null,
+        payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
+        account_id: paymentMethod === 'account' ? (accountId || null) : null,
+        sarafi_id: paymentMethod === 'sarafi' ? (sarafiId || null) : null,
         discount_amount: discount,
         paid_amount: paidAmount,
         items: cart.map((i) => ({
@@ -408,20 +413,37 @@ function POSView() {
             </select>
           </div>
 
-          {/* Account selector */}
+          {/* Payment method toggle */}
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm"
-            >
-              {accounts.map((a) => (
-                <option key={a.account_id} value={a.account_id}>
-                  {a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-slate-600 mb-1.5">روش پرداخت</label>
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-2">
+              <button type="button" onClick={() => setPaymentMethod('account')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'account' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>
+                حساب مستقیم
+              </button>
+              <button type="button" onClick={() => setPaymentMethod('sarafi')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'sarafi' ? 'bg-white shadow text-amber-700' : 'text-slate-500'}`}>
+                از طریق صرافی
+              </button>
+            </div>
+            {paymentMethod === 'account' ? (
+              <select value={accountId}
+                onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm">
+                {accounts.map((a) => (
+                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                ))}
+              </select>
+            ) : (
+              <select value={sarafiId}
+                onChange={(e) => setSarafiId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-amber-50 text-sm">
+                <option value="">انتخاب صرافی...</option>
+                {sarafis.map((s) => (
+                  <option key={s.sarafi_id} value={s.sarafi_id}>{s.name} ({s.currency})</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <hr className="border-slate-100" />
