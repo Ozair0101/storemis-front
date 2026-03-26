@@ -287,7 +287,8 @@ export default function PurchaseFormPage() {
           </div>
           <div className="px-5 py-3 flex items-center justify-between gap-3">
             <label className="text-sm text-slate-600 whitespace-nowrap">مبلغ پرداختی</label>
-            <input type="number" min={0} value={paidAmount || ''} onChange={e => setPaidAmount(Number(e.target.value) || 0)}
+            <input type="number" min={0} max={totalAmount} value={paidAmount || ''}
+              onChange={e => { const v = Number(e.target.value) || 0; setPaidAmount(Math.min(v, totalAmount)); }}
               placeholder="0" dir="ltr"
               className="w-36 px-3 py-2 border border-slate-300 rounded-lg text-sm text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
           </div>
