@@ -27,6 +27,7 @@ import SarafisPage from './pages/SarafisPage';
 import SarafiFormPage from './pages/SarafiFormPage';
 import SarafiDetailPage from './pages/SarafiDetailPage';
 import DebtsPage from './pages/DebtsPage';
+import ExchangeRatesPage from './pages/ExchangeRatesPage';
 import ReportsPage from './pages/ReportsPage';
 import UsersPage from './pages/UsersPage';
 import UserFormPage from './pages/UserFormPage';
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="/employees/new"             element={<PL><EmployeeFormPage /></PL>} />
         <Route path="/employees/:id/edit"        element={<PL><EmployeeFormPage /></PL>} />
 
+        <Route path="/exchange-rates"              element={<PL><ExchangeRatesPage /></PL>} />
         <Route path="/reports"                   element={<PL><ReportsPage /></PL>} />
 
         <Route path="/users"                     element={<AL><UsersPage /></AL>} />
