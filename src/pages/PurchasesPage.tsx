@@ -242,9 +242,12 @@ function CreatePurchaseModal({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
+  const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
   const [supplierId, setSupplierId] = useState<number | ''>('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'sarafi'>('account');
   const [accountId, setAccountId] = useState<number | ''>('');
+  const [sarafiId, setSarafiId] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
   const [items, setItems] = useState<PurchaseItem[]>([]);
@@ -259,6 +262,7 @@ function CreatePurchaseModal({
     api.get('/suppliers').then((r) => setSuppliers(Array.isArray(r.data) ? r.data : r.data.data ?? [])).catch(() => {});
     api.get('/products').then((r) => setProducts(Array.isArray(r.data) ? r.data : r.data.data ?? [])).catch(() => {});
     api.get('/accounts').then((r) => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
+    api.get('/sarafis').then((r) => setSarafis(r.data)).catch(() => {});
   }, []);
 
   const addItem = () => {
@@ -303,8 +307,9 @@ function CreatePurchaseModal({
       await api.post('/purchases', {
         supplier_id: supplierId,
         invoice_number: invoiceNumber,
-        payment_type: selectedAccount?.type || 'cash',
-        account_id: accountId || null,
+        payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
+        account_id: paymentMethod === 'account' ? (accountId || null) : null,
+        sarafi_id: paymentMethod === 'sarafi' ? (sarafiId || null) : null,
         paid_amount: paidAmount,
         due_date: dueDate || null,
         items: items.map((i) => ({
@@ -367,17 +372,36 @@ function CreatePurchaseModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
-              <select
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-              >
-                <option value="">انتخاب حساب...</option>
-                {accounts.map((a) => (
-                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">روش پرداخت</label>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-2">
+                <button type="button" onClick={() => setPaymentMethod('account')}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'account' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>
+                  حساب مستقیم
+                </button>
+                <button type="button" onClick={() => setPaymentMethod('sarafi')}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'sarafi' ? 'bg-white shadow text-amber-700' : 'text-slate-500'}`}>
+                  از طریق صرافی
+                </button>
+              </div>
+              {paymentMethod === 'account' ? (
+                <select value={accountId}
+                  onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm">
+                  <option value="">انتخاب حساب...</option>
+                  {accounts.map((a) => (
+                    <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                  ))}
+                </select>
+              ) : (
+                <select value={sarafiId}
+                  onChange={(e) => setSarafiId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-amber-50 text-sm">
+                  <option value="">انتخاب صرافی...</option>
+                  {sarafis.map((s) => (
+                    <option key={s.sarafi_id} value={s.sarafi_id}>{s.name} ({s.currency})</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -630,14 +654,18 @@ function PaymentModal({
   onUpdated: () => void;
 }) {
   const [paidAmount, setPaidAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'sarafi'>('account');
   const [accountId, setAccountId] = useState<number | ''>('');
+  const [sarafiId, setSarafiId] = useState<number | ''>('');
   const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
+  const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = purchase.total_amount - purchase.paid_amount;
 
   useEffect(() => {
     api.get('/accounts').then((r) => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
+    api.get('/sarafis').then((r) => setSarafis(r.data)).catch(() => {});
   }, []);
 
   const submit = async () => {
@@ -650,8 +678,9 @@ function PaymentModal({
       const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.put(`/purchases/${purchase.purchase_id}/payment`, {
         paid_amount: paidAmount,
-        payment_type: selectedAccount?.type || 'cash',
-        account_id: accountId || null,
+        payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
+        account_id: paymentMethod === 'account' ? (accountId || null) : null,
+        sarafi_id: paymentMethod === 'sarafi' ? (sarafiId || null) : null,
       });
       toast.success('پرداخت با موفقیت ثبت شد');
       onUpdated();
@@ -695,19 +724,38 @@ function PaymentModal({
             </div>
           </div>
 
-          {/* Account selector */}
+          {/* Payment method */}
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
-            >
-              <option value="">انتخاب حساب...</option>
-              {accounts.map((a) => (
-                <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-slate-600 mb-1.5">روش پرداخت</label>
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-2">
+              <button type="button" onClick={() => setPaymentMethod('account')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'account' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>
+                حساب مستقیم
+              </button>
+              <button type="button" onClick={() => setPaymentMethod('sarafi')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'sarafi' ? 'bg-white shadow text-amber-700' : 'text-slate-500'}`}>
+                از طریق صرافی
+              </button>
+            </div>
+            {paymentMethod === 'account' ? (
+              <select value={accountId}
+                onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm">
+                <option value="">انتخاب حساب...</option>
+                {accounts.map((a) => (
+                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                ))}
+              </select>
+            ) : (
+              <select value={sarafiId}
+                onChange={(e) => setSarafiId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-amber-50 text-sm">
+                <option value="">انتخاب صرافی...</option>
+                {sarafis.map((s) => (
+                  <option key={s.sarafi_id} value={s.sarafi_id}>{s.name} ({s.currency})</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Amount */}
