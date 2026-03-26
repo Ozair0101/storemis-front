@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../api/axios';
 import {
   HiOutlineHome,
   HiOutlineCube,
@@ -18,6 +19,8 @@ import {
   HiOutlineMenu,
   HiOutlineX,
   HiOutlineSwitchHorizontal,
+  HiOutlineBell,
+  HiOutlineExclamationCircle,
 } from 'react-icons/hi';
 
 interface LayoutProps {
@@ -35,6 +38,7 @@ const navItems = [
   { path: '/expenses', label: 'مصارف', icon: HiOutlineCreditCard },
   { path: '/sarafis', label: 'صرافی\u200Cها', icon: HiOutlineSwitchHorizontal },
   { path: '/accounts', label: 'حساب\u200Cها', icon: HiOutlineCalculator },
+  { path: '/debts', label: 'بدهی‌ها و طلب‌ها', icon: HiOutlineExclamationCircle },
   { path: '/employees', label: 'کارمندان', icon: HiOutlineUserGroup },
   { path: '/reports', label: 'گزارشات', icon: HiOutlineChartBar },
   { path: '/users', label: 'کاربران', icon: HiOutlineShieldCheck },
@@ -44,6 +48,17 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [debtCount, setDebtCount] = useState(0);
+
+  // Fetch debt count every 60s for notification badge
+  useEffect(() => {
+    const fetchCount = () => {
+      api.get('/debts/count').then(r => setDebtCount(r.data.count)).catch(() => {});
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -139,6 +154,19 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Notification bell */}
+            <button
+              onClick={() => navigate('/debts')}
+              className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              title="بدهی‌ها و طلب‌ها"
+            >
+              <HiOutlineBell className="w-5 h-5" />
+              {debtCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 animate-pulse">
+                  {debtCount > 99 ? '99+' : debtCount}
+                </span>
+              )}
+            </button>
             <div className="text-left">
               <p className="text-sm font-medium text-slate-700">
                 {user?.name || user?.username || 'کاربر'}

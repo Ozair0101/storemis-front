@@ -26,6 +26,7 @@ import EmployeeFormPage from './pages/EmployeeFormPage';
 import SarafisPage from './pages/SarafisPage';
 import SarafiFormPage from './pages/SarafiFormPage';
 import SarafiDetailPage from './pages/SarafiDetailPage';
+import DebtsPage from './pages/DebtsPage';
 import ReportsPage from './pages/ReportsPage';
 import UsersPage from './pages/UsersPage';
 import UserFormPage from './pages/UserFormPage';
@@ -80,6 +81,8 @@ export default function App() {
         <Route path="/accounts"                  element={<PL><AccountsPage /></PL>} />
         <Route path="/accounts/new"              element={<PL><AccountFormPage /></PL>} />
         <Route path="/accounts/:id/edit"         element={<PL><AccountFormPage /></PL>} />
+
+        <Route path="/debts"                      element={<PL><DebtsPage /></PL>} />
 
         <Route path="/employees"                 element={<PL><EmployeesPage /></PL>} />
         <Route path="/employees/new"             element={<PL><EmployeeFormPage /></PL>} />
