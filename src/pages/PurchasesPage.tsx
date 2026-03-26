@@ -153,7 +153,7 @@ function PaymentModal({ purchase, onClose, onUpdated }: {
   const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const remaining = purchase.total_amount - purchase.paid_amount;
+  const remaining = Number(purchase.total_amount) - Number(purchase.paid_amount);
 
   useEffect(() => {
     api.get('/accounts').then(r => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
@@ -166,7 +166,7 @@ function PaymentModal({ purchase, onClose, onUpdated }: {
     try {
       const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.put(`/purchases/${purchase.purchase_id}/payment`, {
-        paid_amount: paidAmount,
+        paid_amount: Number(purchase.paid_amount) + paidAmount,
         payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
         account_id: paymentMethod === 'account' ? (accountId || null) : null,
         sarafi_id: paymentMethod === 'sarafi' ? (sarafiId || null) : null,
@@ -232,8 +232,12 @@ function PaymentModal({ purchase, onClose, onUpdated }: {
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">مبلغ پرداخت</label>
-            <input type="number" min={0} max={remaining} value={paidAmount || ''} onChange={e => setPaidAmount(Number(e.target.value) || 0)}
+            <input type="number" min={0} max={remaining} value={paidAmount || ''}
+              onChange={e => { const v = Number(e.target.value) || 0; setPaidAmount(Math.min(v, remaining)); }}
               placeholder="0" className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+            {remaining > 0 && (
+              <p className="text-xs text-slate-400 mt-1">حداکثر: {fmt(remaining)} افغانی</p>
+            )}
           </div>
 
           {/* Actions */}
