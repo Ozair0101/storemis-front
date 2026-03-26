@@ -241,9 +241,10 @@ function CreatePurchaseModal({
 }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
   const [supplierId, setSupplierId] = useState<number | ''>('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [paymentType, setPaymentType] = useState('cash');
+  const [accountId, setAccountId] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
   const [items, setItems] = useState<PurchaseItem[]>([]);
@@ -257,6 +258,7 @@ function CreatePurchaseModal({
   useEffect(() => {
     api.get('/suppliers').then((r) => setSuppliers(Array.isArray(r.data) ? r.data : r.data.data ?? [])).catch(() => {});
     api.get('/products').then((r) => setProducts(Array.isArray(r.data) ? r.data : r.data.data ?? [])).catch(() => {});
+    api.get('/accounts').then((r) => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
   }, []);
 
   const addItem = () => {
@@ -297,10 +299,12 @@ function CreatePurchaseModal({
     }
     setSubmitting(true);
     try {
+      const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.post('/purchases', {
         supplier_id: supplierId,
         invoice_number: invoiceNumber,
-        payment_type: paymentType,
+        payment_type: selectedAccount?.type || 'cash',
+        account_id: accountId || null,
         paid_amount: paidAmount,
         due_date: dueDate || null,
         items: items.map((i) => ({
@@ -363,15 +367,16 @@ function CreatePurchaseModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">نوع پرداخت</label>
+              <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
               <select
-                value={paymentType}
-                onChange={(e) => setPaymentType(e.target.value)}
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
               >
-                <option value="cash">نقد</option>
-                <option value="bank">بانکی</option>
-                <option value="mobile">موبایل</option>
+                <option value="">انتخاب حساب...</option>
+                {accounts.map((a) => (
+                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                ))}
               </select>
             </div>
 
@@ -625,10 +630,15 @@ function PaymentModal({
   onUpdated: () => void;
 }) {
   const [paidAmount, setPaidAmount] = useState(0);
-  const [paymentType, setPaymentType] = useState(purchase.payment_type || 'cash');
+  const [accountId, setAccountId] = useState<number | ''>('');
+  const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const remaining = purchase.total_amount - purchase.paid_amount;
+
+  useEffect(() => {
+    api.get('/accounts').then((r) => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
+  }, []);
 
   const submit = async () => {
     if (paidAmount <= 0) {
@@ -637,9 +647,11 @@ function PaymentModal({
     }
     setSubmitting(true);
     try {
+      const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.put(`/purchases/${purchase.purchase_id}/payment`, {
         paid_amount: paidAmount,
-        payment_type: paymentType,
+        payment_type: selectedAccount?.type || 'cash',
+        account_id: accountId || null,
       });
       toast.success('پرداخت با موفقیت ثبت شد');
       onUpdated();
@@ -683,17 +695,18 @@ function PaymentModal({
             </div>
           </div>
 
-          {/* Payment type */}
+          {/* Account selector */}
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">نوع پرداخت</label>
+            <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
             <select
-              value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value)}
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
               className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
             >
-              <option value="cash">نقد</option>
-              <option value="bank">بانکی</option>
-              <option value="mobile">موبایل</option>
+              <option value="">انتخاب حساب...</option>
+              {accounts.map((a) => (
+                <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+              ))}
             </select>
           </div>
 

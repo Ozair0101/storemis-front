@@ -6,12 +6,14 @@ import { FiArrowLeft, FiSave } from 'react-icons/fi';
 
 interface ExpenseForm {
   description: string; amount: string; category: string;
-  payment_type: string; date: string;
+  payment_type: string; account_id: string; date: string;
 }
+
+interface Account { account_id: number; name: string; type: string; currency: string; }
 
 const emptyForm: ExpenseForm = {
   description: '', amount: '', category: 'misc', payment_type: 'cash',
-  date: new Date().toISOString().split('T')[0],
+  account_id: '', date: new Date().toISOString().split('T')[0],
 };
 
 const categoryOptions = [
@@ -29,12 +31,20 @@ export default function ExpenseFormPage() {
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState<ExpenseForm>(emptyForm);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
 
   const set = (k: keyof ExpenseForm, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
+    api.get('/accounts').then(r => {
+      setAccounts(r.data);
+      if (!isEdit && r.data.length > 0) {
+        setForm(f => ({ ...f, account_id: String(r.data[0].account_id) }));
+      }
+    }).catch(() => {});
+
     if (!isEdit) return;
     api.get(`/expenses/${id}`)
       .then(res => {
@@ -42,7 +52,7 @@ export default function ExpenseFormPage() {
         setForm({
           description: e.description || '', amount: e.amount?.toString() || '',
           category: e.category || 'misc', payment_type: e.payment_type || 'cash',
-          date: e.date ? e.date.split('T')[0] : '',
+          account_id: '', date: e.date ? e.date.split('T')[0] : '',
         });
       })
       .catch(() => { toast.error('خطا در دریافت اطلاعات مصرف'); navigate('/expenses'); })
@@ -53,7 +63,13 @@ export default function ExpenseFormPage() {
     e.preventDefault();
     if (!form.description.trim()) { toast.error('توضیحات الزامی است'); return; }
     if (!form.amount || Number(form.amount) <= 0) { toast.error('مبلغ باید بزرگتر از صفر باشد'); return; }
-    const body = { ...form, amount: Number(form.amount) };
+    const selectedAccount = accounts.find(a => a.account_id === Number(form.account_id));
+    const body = {
+      ...form,
+      amount: Number(form.amount),
+      account_id: form.account_id ? Number(form.account_id) : null,
+      payment_type: selectedAccount?.type || form.payment_type,
+    };
     setSubmitting(true);
     try {
       if (isEdit) { await api.put(`/expenses/${id}`, body); toast.success('مصرف ویرایش شد'); }
@@ -115,11 +131,12 @@ export default function ExpenseFormPage() {
               </select>
             </div>
             <div>
-              <label className={labelCls}>نوع پرداخت</label>
-              <select value={form.payment_type} onChange={e => set('payment_type', e.target.value)} className={inputCls}>
-                <option value="cash">نقدی</option>
-                <option value="bank">بانکی</option>
-                <option value="mobile">موبایل</option>
+              <label className={labelCls}>حساب پرداخت</label>
+              <select value={form.account_id} onChange={e => set('account_id', e.target.value)} className={inputCls}>
+                <option value="">انتخاب حساب...</option>
+                {accounts.map(a => (
+                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                ))}
               </select>
             </div>
           </div>

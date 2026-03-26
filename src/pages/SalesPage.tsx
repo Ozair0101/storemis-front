@@ -137,8 +137,9 @@ function POSView() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [accounts, setAccounts] = useState<{ account_id: number; name: string; type: string; currency: string }[]>([]);
   const [customerId, setCustomerId] = useState<number | ''>('');
-  const [paymentType, setPaymentType] = useState('cash');
+  const [accountId, setAccountId] = useState<number | ''>('');
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -148,6 +149,10 @@ function POSView() {
   useEffect(() => {
     barcodeRef.current?.focus();
     api.get('/customers').then((r) => setCustomers(r.data)).catch(() => {});
+    api.get('/accounts').then((r) => {
+      setAccounts(r.data);
+      if (r.data.length > 0) setAccountId(r.data[0].account_id);
+    }).catch(() => {});
   }, []);
 
   /* close dropdown on outside click */
@@ -244,9 +249,11 @@ function POSView() {
     }
     setSubmitting(true);
     try {
+      const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.post('/sales', {
         customer_id: customerId || null,
-        payment_type: paymentType,
+        payment_type: selectedAccount?.type || 'cash',
+        account_id: accountId || null,
         discount_amount: discount,
         paid_amount: paidAmount,
         items: cart.map((i) => ({
@@ -401,31 +408,20 @@ function POSView() {
             </select>
           </div>
 
-          {/* Payment type */}
+          {/* Account selector */}
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">نوع پرداخت</label>
-            <div className="flex gap-2">
-              {(['cash', 'bank', 'mobile'] as const).map((t) => (
-                <label
-                  key={t}
-                  className={`flex-1 text-center py-2 rounded-lg border cursor-pointer text-sm font-medium transition ${
-                    paymentType === t
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={t}
-                    checked={paymentType === t}
-                    onChange={() => setPaymentType(t)}
-                    className="sr-only"
-                  />
-                  {paymentLabel[t]}
-                </label>
+            <label className="block text-sm font-medium text-slate-600 mb-1">حساب پرداخت</label>
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-sm"
+            >
+              {accounts.map((a) => (
+                <option key={a.account_id} value={a.account_id}>
+                  {a.name} ({a.currency})
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <hr className="border-slate-100" />
