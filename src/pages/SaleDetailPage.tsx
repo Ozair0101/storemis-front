@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { FiArrowLeft, FiPrinter } from 'react-icons/fi';
+import { FiArrowLeft, FiPrinter, FiDollarSign, FiX } from 'react-icons/fi';
 
 interface SaleItem {
   id: number;
@@ -45,14 +45,17 @@ export default function SaleDetailPage() {
   const navigate = useNavigate();
   const [sale, setSale] = useState<SaleDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPayment, setShowPayment] = useState(false);
 
-  useEffect(() => {
+  const fetchSale = () => {
     if (!id) return;
     api.get(`/sales/${id}`)
       .then(r => setSale(r.data))
       .catch(() => { toast.error('خطا در دریافت اطلاعات فروش'); navigate('/sales'); })
       .finally(() => setLoading(false));
-  }, [id, navigate]);
+  };
+
+  useEffect(() => { fetchSale(); }, [id, navigate]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -78,11 +81,20 @@ export default function SaleDetailPage() {
           <FiArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">بازگشت به فروش‌ها</span>
         </button>
-        <button onClick={() => window.print()}
-          className="flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-          <FiPrinter className="w-4 h-4" />
-          چاپ
-        </button>
+        <div className="flex gap-2">
+          {sale.status !== 'completed' && balance < 0 && (
+            <button onClick={() => setShowPayment(true)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              <FiDollarSign className="w-4 h-4" />
+              ثبت پرداخت بقیه
+            </button>
+          )}
+          <button onClick={() => window.print()}
+            className="flex items-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <FiPrinter className="w-4 h-4" />
+            چاپ
+          </button>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════
@@ -236,6 +248,111 @@ export default function SaleDetailPage() {
         </div>
       </div>
 
+      {/* Payment Modal */}
+      {showPayment && <PaymentModal sale={sale} onClose={() => setShowPayment(false)} onUpdated={() => { setShowPayment(false); fetchSale(); }} />}
+    </div>
+  );
+}
+
+/* ─── Payment Modal ─── */
+function PaymentModal({ sale, onClose, onUpdated }: {
+  sale: { sale_id: number; total_amount: number; discount_amount: number; paid_amount: number };
+  onClose: () => void; onUpdated: () => void;
+}) {
+  const [newAmount, setNewAmount] = useState(0);
+  const [payMethod, setPayMethod] = useState<'account' | 'sarafi'>('account');
+  const [accountId, setAccountId] = useState<number | ''>('');
+  const [sarafiId, setSarafiId] = useState<number | ''>('');
+  const [accounts, setAccounts] = useState<{ account_id: number; name: string; currency: string }[]>([]);
+  const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const net = Number(sale.total_amount) - Number(sale.discount_amount);
+  const remaining = net - Number(sale.paid_amount);
+  const f = (n: number) => Number(n ?? 0).toLocaleString('fa-AF');
+
+  useEffect(() => {
+    api.get('/accounts').then(r => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
+    api.get('/sarafis').then(r => setSarafis(r.data)).catch(() => {});
+  }, []);
+
+  const submit = async () => {
+    if (newAmount <= 0) { toast.error('لطفاً مبلغ را وارد کنید'); return; }
+    setSubmitting(true);
+    try {
+      await api.put(`/sales/${sale.sale_id}/payment`, {
+        paid_amount: Number(sale.paid_amount) + newAmount,
+        payment_type: payMethod === 'sarafi' ? 'sarafi' : 'cash',
+        account_id: payMethod === 'account' ? (accountId || null) : null,
+        sarafi_id: payMethod === 'sarafi' ? (sarafiId || null) : null,
+      });
+      toast.success('پرداخت ثبت شد');
+      onUpdated();
+    } catch { toast.error('خطا در ثبت پرداخت'); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 print:hidden" onClick={onClose}>
+      <div dir="rtl" onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <h2 className="text-lg font-bold text-slate-800">ثبت پرداخت بقیه</h2>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><FiX size={20} /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-600">مبلغ خالص</span><span className="font-semibold">{f(net)} AFN</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-600">پرداخت شده</span><span className="font-semibold text-green-600">{f(Number(sale.paid_amount))} AFN</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-2 text-red-600 font-bold">
+              <span>باقی‌مانده</span><span>{f(remaining)} AFN</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1.5">روش پرداخت</label>
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-2">
+              <button type="button" onClick={() => setPayMethod('account')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${payMethod === 'account' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>
+                حساب مستقیم
+              </button>
+              <button type="button" onClick={() => setPayMethod('sarafi')}
+                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${payMethod === 'sarafi' ? 'bg-white shadow text-amber-700' : 'text-slate-500'}`}>
+                از طریق صرافی
+              </button>
+            </div>
+            {payMethod === 'account' ? (
+              <select value={accountId} onChange={e => setAccountId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                {accounts.map(a => <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>)}
+              </select>
+            ) : (
+              <select value={sarafiId} onChange={e => setSarafiId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2.5 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-amber-50">
+                <option value="">انتخاب صرافی...</option>
+                {sarafis.map(s => <option key={s.sarafi_id} value={s.sarafi_id}>{s.name} ({s.currency})</option>)}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-1">مبلغ پرداخت</label>
+            <input type="number" min={0} max={remaining} value={newAmount || ''} onChange={e => setNewAmount(Number(e.target.value) || 0)}
+              placeholder="0" className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 outline-none" />
+          </div>
+
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={onClose} className="px-5 py-2.5 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm font-medium">انصراف</button>
+            <button onClick={submit} disabled={submitting}
+              className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium">
+              {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
