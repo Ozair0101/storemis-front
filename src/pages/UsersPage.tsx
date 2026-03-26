@@ -4,7 +4,7 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
-interface User { id: number; username: string; full_name: string; role_id: number; created_at: string; }
+interface User { user_id: number; username: string; full_name: string; role_id: number; created_at: string; }
 
 const roles: Record<number, string> = {
   1: 'مدیر', 2: 'مدیر فروشگاه', 3: 'صندوقدار', 4: 'انباردار', 5: 'حسابدار',
@@ -32,7 +32,7 @@ export default function UsersPage() {
     if (!deleting) return;
     setSubmitting(true);
     try {
-      await api.delete(`/users/${deleting.id}`);
+      await api.delete(`/users/${deleting.user_id}`);
       toast.success('کاربر حذف شد');
       setDeleting(null);
       fetchUsers();
@@ -69,7 +69,7 @@ export default function UsersPage() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={u.user_id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-800" dir="ltr">{u.username}</td>
                     <td className="px-6 py-4 text-slate-600">{u.full_name}</td>
                     <td className="px-6 py-4">
@@ -82,7 +82,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(`/users/${u.id}/edit`)}
+                        <button onClick={() => navigate(`/users/${u.user_id}/edit`)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                           <FiEdit2 className="w-4 h-4" />
                         </button>

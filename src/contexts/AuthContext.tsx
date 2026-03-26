@@ -2,10 +2,14 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import api from '../api/axios';
 
 interface User {
-  id: string;
+  user_id: number;
   username: string;
   name: string;
+  full_name?: string;
   role: string;
+  role_name?: string;
+  role_id?: number;
+  permissions?: Record<string, unknown>;
 }
 
 interface AuthContextType {
@@ -30,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedToken) {
         try {
           const response = await api.get('/auth/me');
-          setUser(response.data);
+          const d = response.data;
+          setUser({ ...d, name: d.full_name || d.name || d.username, role: (d.role_name || d.role || '').toLowerCase() });
           setToken(savedToken);
         } catch {
           localStorage.removeItem('token');
@@ -48,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token: newToken, user: userData } = response.data;
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    setUser(userData);
+    setUser({ ...userData, name: userData.full_name || userData.name || userData.username, role: (userData.role_name || userData.role || '').toLowerCase() });
   };
 
   const logout = () => {
