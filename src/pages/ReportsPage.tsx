@@ -371,58 +371,135 @@ function ProfitLossTab({ from, to }: { from: string; to: string }) {
   if (loading) return <Spinner />;
   if (!data) return <p className="text-slate-400 py-8 text-center">خطا در بارگذاری</p>;
 
-  const rows: { label: string; value: number; bold?: boolean; accent?: string }[] = [
-    { label: 'کل فروش', value: data.total_sales },
-    { label: 'تخفیفات', value: data.total_discounts, accent: 'text-orange-600' },
-    { label: 'فروش خالص', value: data.net_sales, bold: true, accent: 'text-blue-700' },
-    { label: 'کل خرید', value: data.total_purchases, accent: 'text-orange-600' },
-    { label: 'سود ناخالص', value: data.gross_profit, bold: true, accent: data.gross_profit >= 0 ? 'text-green-600' : 'text-red-600' },
-    { label: 'کل مصارف', value: data.total_expenses, accent: 'text-orange-600' },
-    { label: 'سود خالص', value: data.net_profit, bold: true, accent: data.net_profit >= 0 ? 'text-green-600' : 'text-red-600' },
-  ];
+  const isProfit = data.net_profit >= 0;
 
   return (
-    <div className="space-y-6">
-      {/* Big hero card */}
-      <div
-        className={`rounded-xl p-6 text-center ${
-          data.net_profit >= 0
-            ? 'bg-green-50 border border-green-200'
-            : 'bg-red-50 border border-red-200'
-        }`}
-      >
-        <p className="text-sm text-slate-500 mb-1">سود / زیان خالص</p>
-        <p
-          className={`text-3xl font-bold ${
-            data.net_profit >= 0 ? 'text-green-700' : 'text-red-700'
-          }`}
-        >
-          {fmtMoney(data.net_profit)}
+    <div dir="rtl" className="space-y-5">
+
+      {/* ═══ Result Banner ═══ */}
+      <div className={`rounded-2xl border-2 p-6 text-center ${
+        isProfit ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+      }`}>
+        <p className="text-sm text-slate-500 mb-2">نتیجه نهایی</p>
+        <p className={`text-4xl font-extrabold mb-1 ${isProfit ? 'text-green-700' : 'text-red-700'}`}>
+          {isProfit ? '+' : '-'}{fmtMoney(Math.abs(data.net_profit))}
+        </p>
+        <p className={`text-sm font-semibold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+          {isProfit ? 'سود خالص — شما سودآور هستید' : 'زیان خالص — مصارف بیشتر از درآمد است'}
         </p>
       </div>
 
-      {/* Breakdown table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((r, i) => (
-              <tr
-                key={i}
-                className={`border-b border-slate-100 ${r.bold ? 'bg-slate-50' : ''}`}
-              >
-                <td className={`px-5 py-3 ${r.bold ? 'font-bold' : ''} text-slate-700`}>
-                  {r.label}
-                </td>
-                <td
-                  className={`px-5 py-3 text-left font-semibold ${r.accent ?? 'text-slate-800'}`}
-                >
-                  {fmtMoney(r.value)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* ═══ Visual Flow: 3 Steps ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* STEP 1: Revenue */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-blue-600 px-5 py-3">
+            <p className="text-white text-xs font-semibold uppercase tracking-wider">مرحله ۱ — درآمد</p>
+            <p className="text-white/70 text-[11px]">پول که از فروش بدست آمده</p>
+          </div>
+          <div className="p-5 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">کل فروش</span>
+              <span className="text-sm font-bold text-slate-800">{fmtMoney(data.total_sales)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">تخفیفات داده شده</span>
+              <span className="text-sm font-medium text-orange-600">− {fmtMoney(data.total_discounts)}</span>
+            </div>
+            <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
+              <span className="text-sm font-bold text-blue-700">فروش خالص</span>
+              <span className="text-lg font-extrabold text-blue-700">{fmtMoney(data.net_sales)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 2: Cost of Goods */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-orange-500 px-5 py-3">
+            <p className="text-white text-xs font-semibold uppercase tracking-wider">مرحله ۲ — قیمت تمام شده</p>
+            <p className="text-white/70 text-[11px]">پول که برای خرید اجناس خرج شده</p>
+          </div>
+          <div className="p-5 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">فروش خالص</span>
+              <span className="text-sm font-bold text-blue-700">{fmtMoney(data.net_sales)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">کل خریدها</span>
+              <span className="text-sm font-medium text-orange-600">− {fmtMoney(data.total_purchases)}</span>
+            </div>
+            <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
+              <span className="text-sm font-bold" style={{ color: data.gross_profit >= 0 ? '#15803d' : '#dc2626' }}>
+                سود ناخالص
+              </span>
+              <span className="text-lg font-extrabold" style={{ color: data.gross_profit >= 0 ? '#15803d' : '#dc2626' }}>
+                {data.gross_profit >= 0 ? '' : '−'}{fmtMoney(Math.abs(data.gross_profit))}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 3: Operating Expenses */}
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className={`px-5 py-3 ${isProfit ? 'bg-green-600' : 'bg-red-600'}`}>
+            <p className="text-white text-xs font-semibold uppercase tracking-wider">مرحله ۳ — مصارف عملیاتی</p>
+            <p className="text-white/70 text-[11px]">کرایه، معاش، برق، ترانسپورت و ...</p>
+          </div>
+          <div className="p-5 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">سود ناخالص</span>
+              <span className="text-sm font-bold" style={{ color: data.gross_profit >= 0 ? '#15803d' : '#dc2626' }}>
+                {fmtMoney(data.gross_profit)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-slate-600">کل مصارف</span>
+              <span className="text-sm font-medium text-orange-600">− {fmtMoney(data.total_expenses)}</span>
+            </div>
+            <div className={`border-t pt-3 flex justify-between items-center ${isProfit ? 'border-green-100' : 'border-red-100'}`}>
+              <span className={`text-sm font-bold ${isProfit ? 'text-green-700' : 'text-red-700'}`}>
+                سود خالص (نتیجه)
+              </span>
+              <span className={`text-lg font-extrabold ${isProfit ? 'text-green-700' : 'text-red-700'}`}>
+                {isProfit ? '' : '−'}{fmtMoney(Math.abs(data.net_profit))}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* ═══ Simple Explanation ═══ */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <h3 className="text-sm font-bold text-slate-700 mb-3">خلاصه محاسبه</h3>
+        <div className="space-y-2">
+          {/* Row: Sales */}
+          <div className="flex items-center gap-3 py-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold shrink-0">۱</div>
+            <div className="flex-1 flex justify-between items-center">
+              <span className="text-sm text-slate-700">کل فروش − تخفیفات = <span className="font-bold text-blue-700">فروش خالص</span></span>
+              <span className="text-sm font-bold text-blue-700">{fmtMoney(data.net_sales)}</span>
+            </div>
+          </div>
+          {/* Row: Gross */}
+          <div className="flex items-center gap-3 py-2 border-t border-slate-100">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-700 text-xs font-bold shrink-0">۲</div>
+            <div className="flex-1 flex justify-between items-center">
+              <span className="text-sm text-slate-700">فروش خالص − خریدها = <span className="font-bold" style={{ color: data.gross_profit >= 0 ? '#15803d' : '#dc2626' }}>سود ناخالص</span></span>
+              <span className="text-sm font-bold" style={{ color: data.gross_profit >= 0 ? '#15803d' : '#dc2626' }}>{fmtMoney(data.gross_profit)}</span>
+            </div>
+          </div>
+          {/* Row: Net */}
+          <div className={`flex items-center gap-3 py-2 border-t border-slate-100`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isProfit ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>۳</div>
+            <div className="flex-1 flex justify-between items-center">
+              <span className="text-sm text-slate-700">سود ناخالص − مصارف = <span className={`font-bold ${isProfit ? 'text-green-700' : 'text-red-700'}`}>سود خالص</span></span>
+              <span className={`text-base font-extrabold ${isProfit ? 'text-green-700' : 'text-red-700'}`}>{fmtMoney(data.net_profit)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
