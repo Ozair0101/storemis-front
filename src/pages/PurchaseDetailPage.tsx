@@ -29,14 +29,17 @@ const STATUS: Record<string, { label: string; bg: string; text: string }> = {
 export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  interface Payment { payment_id: number; amount: number; currency: string; method: string; account_name: string | null; note: string | null; date: string; user_name: string | null; }
+
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
 
   const fetchPurchase = () => {
     if (!id) return;
-    api.get(`/purchases/${id}`)
-      .then(r => setPurchase(r.data))
+    Promise.all([api.get(`/purchases/${id}`), api.get(`/purchases/${id}/payments`)])
+      .then(([pRes, payRes]) => { setPurchase(pRes.data); setPayments(payRes.data); })
       .catch(() => { toast.error('خطا در دریافت جزئیات خرید'); navigate('/purchases'); })
       .finally(() => setLoading(false));
   };
@@ -203,6 +206,57 @@ export default function PurchaseDetailPage() {
           )}
         </div>
       </div>
+      {/* Payment History */}
+      {payments.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-700">تاریخچه پرداخت‌ها</h2>
+            <span className="text-xs text-slate-400">{payments.length} پرداخت</span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {payments.map((p, idx) => {
+              const runningTotal = payments.slice(0, idx + 1).reduce((s, pp) => s + Number(pp.amount), 0);
+              return (
+                <div key={p.payment_id} className="flex items-center gap-4 px-6 py-4">
+                  <div className="shrink-0 w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-semibold text-slate-800">{afn(Number(p.amount))} {p.currency}</span>
+                      {p.account_name && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          p.method === 'sarafi' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'
+                        }`}>
+                          {p.account_name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 text-xs text-slate-400">
+                      {p.note && <span>{p.note}</span>}
+                      {p.user_name && <span>توسط: {p.user_name}</span>}
+                      <span>{new Date(p.date).toLocaleDateString('fa-AF')} — {new Date(p.date).toLocaleTimeString('fa-AF', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-left">
+                    <p className="text-xs text-slate-400">مجموع تا اینجا</p>
+                    <p className="text-sm font-bold text-slate-700">{afn(runningTotal)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 flex justify-between items-center">
+            <span className="text-xs font-semibold text-slate-500">مجموع کل پرداخت‌ها</span>
+            <span className="text-sm font-bold text-green-700">
+              {afn(payments.reduce((s, p) => s + Number(p.amount), 0))} AFN
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal */}
       {showPayment && (
         <PurchasePaymentModal
