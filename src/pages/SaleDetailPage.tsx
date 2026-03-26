@@ -82,11 +82,11 @@ export default function SaleDetailPage() {
           <span className="text-sm font-medium">بازگشت به فروش‌ها</span>
         </button>
         <div className="flex gap-2">
-          {sale.status !== 'completed' && balance < 0 && (
+          {paid < net && (
             <button onClick={() => setShowPayment(true)}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
               <FiDollarSign className="w-4 h-4" />
-              ثبت پرداخت بقیه
+              ثبت پرداخت بقیه ({afn(net - paid)} AFN)
             </button>
           )}
           <button onClick={() => window.print()}
