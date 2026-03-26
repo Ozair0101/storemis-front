@@ -6,14 +6,15 @@ import { FiArrowLeft, FiSave } from 'react-icons/fi';
 
 interface ExpenseForm {
   description: string; amount: string; category: string;
-  payment_type: string; account_id: string; date: string;
+  payment_type: string; account_id: string; sarafi_id: string; date: string;
 }
 
 interface Account { account_id: number; name: string; type: string; currency: string; }
+interface Sarafi { sarafi_id: number; name: string; currency: string; }
 
 const emptyForm: ExpenseForm = {
   description: '', amount: '', category: 'misc', payment_type: 'cash',
-  account_id: '', date: new Date().toISOString().split('T')[0],
+  account_id: '', sarafi_id: '', date: new Date().toISOString().split('T')[0],
 };
 
 const categoryOptions = [
@@ -32,6 +33,8 @@ export default function ExpenseFormPage() {
 
   const [form, setForm] = useState<ExpenseForm>(emptyForm);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [sarafis, setSarafis] = useState<Sarafi[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'sarafi'>('account');
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,6 +47,7 @@ export default function ExpenseFormPage() {
         setForm(f => ({ ...f, account_id: String(r.data[0].account_id) }));
       }
     }).catch(() => {});
+    api.get('/sarafis').then(r => setSarafis(r.data)).catch(() => {});
 
     if (!isEdit) return;
     api.get(`/expenses/${id}`)
@@ -67,8 +71,9 @@ export default function ExpenseFormPage() {
     const body = {
       ...form,
       amount: Number(form.amount),
-      account_id: form.account_id ? Number(form.account_id) : null,
-      payment_type: selectedAccount?.type || form.payment_type,
+      account_id: paymentMethod === 'account' ? (form.account_id ? Number(form.account_id) : null) : null,
+      sarafi_id: paymentMethod === 'sarafi' ? (form.sarafi_id ? Number(form.sarafi_id) : null) : null,
+      payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || form.payment_type),
     };
     setSubmitting(true);
     try {
@@ -131,13 +136,33 @@ export default function ExpenseFormPage() {
               </select>
             </div>
             <div>
-              <label className={labelCls}>حساب پرداخت</label>
-              <select value={form.account_id} onChange={e => set('account_id', e.target.value)} className={inputCls}>
-                <option value="">انتخاب حساب...</option>
-                {accounts.map(a => (
-                  <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
-                ))}
-              </select>
+              <label className={labelCls}>روش پرداخت</label>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg mb-2">
+                <button type="button" onClick={() => setPaymentMethod('account')}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'account' ? 'bg-white shadow text-blue-700' : 'text-slate-500'}`}>
+                  حساب مستقیم
+                </button>
+                <button type="button" onClick={() => setPaymentMethod('sarafi')}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${paymentMethod === 'sarafi' ? 'bg-white shadow text-amber-700' : 'text-slate-500'}`}>
+                  از طریق صرافی
+                </button>
+              </div>
+              {paymentMethod === 'account' ? (
+                <select value={form.account_id} onChange={e => set('account_id', e.target.value)} className={inputCls}>
+                  <option value="">انتخاب حساب...</option>
+                  {accounts.map(a => (
+                    <option key={a.account_id} value={a.account_id}>{a.name} ({a.currency})</option>
+                  ))}
+                </select>
+              ) : (
+                <select value={form.sarafi_id} onChange={e => set('sarafi_id', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50">
+                  <option value="">انتخاب صرافی...</option>
+                  {sarafis.map(s => (
+                    <option key={s.sarafi_id} value={s.sarafi_id}>{s.name} ({s.currency})</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>
