@@ -13,6 +13,8 @@ import SupplierFormPage from './pages/SupplierFormPage';
 import CustomersPage from './pages/CustomersPage';
 import CustomerFormPage from './pages/CustomerFormPage';
 import PurchasesPage from './pages/PurchasesPage';
+import PurchaseFormPage from './pages/PurchaseFormPage';
+import PurchaseDetailPage from './pages/PurchaseDetailPage';
 import SalesPage from './pages/SalesPage';
 import SaleDetailPage from './pages/SaleDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
@@ -60,6 +62,9 @@ export default function App() {
         <Route path="/customers/:id/edit"        element={<PL><CustomerFormPage /></PL>} />
 
         <Route path="/purchases"                 element={<PL><PurchasesPage /></PL>} />
+        <Route path="/purchases/new"             element={<PL><PurchaseFormPage /></PL>} />
+        <Route path="/purchases/:id/edit"        element={<PL><PurchaseFormPage /></PL>} />
+        <Route path="/purchases/:id"             element={<PL><PurchaseDetailPage /></PL>} />
         <Route path="/sales"                     element={<PL><SalesPage /></PL>} />
         <Route path="/sales/:id"                 element={<PL><SaleDetailPage /></PL>} />
 
