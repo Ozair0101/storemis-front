@@ -71,7 +71,7 @@ export default function UserFormPage() {
   );
 
   return (
-    <div dir="rtl" className="max-w-2xl mx-auto">
+    <div dir="rtl" className="mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => navigate('/users')}
