@@ -21,6 +21,7 @@ import {
   HiOutlineSwitchHorizontal,
   HiOutlineBell,
   HiOutlineExclamationCircle,
+  HiOutlineCurrencyDollar,
 } from 'react-icons/hi';
 
 interface LayoutProps {
@@ -40,6 +41,7 @@ const navItems = [
   { path: '/accounts', label: 'حساب\u200Cها', icon: HiOutlineCalculator },
   { path: '/debts', label: 'بدهی‌ها و طلب‌ها', icon: HiOutlineExclamationCircle },
   { path: '/employees', label: 'کارمندان', icon: HiOutlineUserGroup },
+  { path: '/exchange-rates', label: 'نرخ ارزها', icon: HiOutlineCurrencyDollar },
   { path: '/reports', label: 'گزارشات', icon: HiOutlineChartBar },
   { path: '/users', label: 'کاربران', icon: HiOutlineShieldCheck },
 ];
