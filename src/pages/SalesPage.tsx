@@ -85,8 +85,8 @@ const statusBadge = (status: string) => {
   );
 };
 
-const formatNumber = (n: number) =>
-  n.toLocaleString('fa-AF', { minimumFractionDigits: 0 });
+const formatNumber = (n: number | string | null | undefined) =>
+  Number(n ?? 0).toLocaleString('fa-AF', { minimumFractionDigits: 0 });
 
 /* ═══════════════════════════════════════════════════════
    Main Component
@@ -619,8 +619,8 @@ function SalePaymentModal({ sale, onClose, onUpdated }: {
   const [sarafis, setSarafis] = useState<{ sarafi_id: number; name: string; currency: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const net = sale.total_amount - sale.discount_amount;
-  const remaining = net - sale.paid_amount;
+  const net = Number(sale.total_amount) - Number(sale.discount_amount);
+  const remaining = net - Number(sale.paid_amount);
 
   useEffect(() => {
     api.get('/accounts').then(r => { setAccounts(r.data); if (r.data.length > 0) setAccountId(r.data[0].account_id); }).catch(() => {});
@@ -633,7 +633,7 @@ function SalePaymentModal({ sale, onClose, onUpdated }: {
     try {
       const selectedAccount = accounts.find(a => a.account_id === accountId);
       await api.put(`/sales/${sale.sale_id}/payment`, {
-        paid_amount: sale.paid_amount + newAmount,
+        paid_amount: Number(sale.paid_amount) + newAmount,
         payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
         account_id: paymentMethod === 'account' ? (accountId || null) : null,
         sarafi_id: paymentMethod === 'sarafi' ? (sarafiId || null) : null,
@@ -699,8 +699,12 @@ function SalePaymentModal({ sale, onClose, onUpdated }: {
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">مبلغ پرداخت</label>
-            <input type="number" min={0} max={remaining} value={newAmount || ''} onChange={e => setNewAmount(Number(e.target.value) || 0)}
+            <input type="number" min={0} max={remaining} value={newAmount || ''}
+              onChange={e => { const v = Number(e.target.value) || 0; setNewAmount(Math.min(v, remaining)); }}
               placeholder="0" className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+            {remaining > 0 && (
+              <p className="text-xs text-slate-400 mt-1">حداکثر: {formatNumber(remaining)} افغانی</p>
+            )}
           </div>
 
           {/* Actions */}

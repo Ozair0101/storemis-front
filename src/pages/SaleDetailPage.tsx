@@ -340,8 +340,12 @@ function PaymentModal({ sale, onClose, onUpdated }: {
 
           <div>
             <label className="block text-sm font-medium text-slate-600 mb-1">مبلغ پرداخت</label>
-            <input type="number" min={0} max={remaining} value={newAmount || ''} onChange={e => setNewAmount(Number(e.target.value) || 0)}
+            <input type="number" min={0} max={remaining} value={newAmount || ''}
+              onChange={e => { const v = Number(e.target.value) || 0; setNewAmount(Math.min(v, remaining)); }}
               placeholder="0" className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 outline-none" />
+            {remaining > 0 && (
+              <p className="text-xs text-slate-400 mt-1">حداکثر: {f(remaining)} AFN</p>
+            )}
           </div>
 
           <div className="flex gap-3 justify-end pt-2">
