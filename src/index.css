@@ -6,3 +6,34 @@
     font-family: 'Vazirmatn', 'Tahoma', sans-serif;
   }
 }
+
+/* ─── Print styles ─── */
+@media print {
+  /* Hide everything except the bill */
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
+  }
+  .print-area {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    padding: 20mm;
+    background: white !important;
+    direction: rtl;
+  }
+  /* Remove scrollbars and backgrounds */
+  body {
+    overflow: visible !important;
+    background: white !important;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
