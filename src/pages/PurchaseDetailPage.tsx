@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { FiArrowLeft, FiPrinter, FiDollarSign, FiX } from 'react-icons/fi';
+import PurchaseBill from '../components/PurchaseBill';
 
 interface PurchaseItem {
   id: number; product_id: number; product_name: string;
@@ -265,6 +266,21 @@ export default function PurchaseDetailPage() {
           onUpdated={() => { setShowPayment(false); fetchPurchase(); }}
         />
       )}
+
+      {/* ═══ Hidden print area — standard bill ═══ */}
+      <div className="print-area hidden print:block">
+        <PurchaseBill data={{
+          purchase_id: purchase.purchase_id,
+          invoice_number: purchase.invoice_number,
+          supplier_name: purchase.supplier_name,
+          payment_type: purchase.payment_type,
+          created_at: purchase.created_at,
+          due_date: purchase.due_date,
+          items: (purchase.items || []).map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })),
+          total_amount: total,
+          paid_amount: paid,
+        }} />
+      </div>
     </div>
   );
 }

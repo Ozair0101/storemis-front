@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { FiArrowLeft, FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiPrinter } from 'react-icons/fi';
+import PurchaseBill from '../components/PurchaseBill';
+import type { BillData } from '../types/bill';
 
 interface Supplier { supplier_id: number; name: string; }
 interface Product { product_id: number; name: string; purchase_price: number; sale_price: number; }
@@ -34,6 +36,11 @@ export default function PurchaseFormPage() {
   const [dueDate, setDueDate] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
   const [items, setItems] = useState<Item[]>([]);
+
+  // Print bill state
+  const [billData, setBillData] = useState<BillData | null>(null);
+  const [showBillPreview, setShowBillPreview] = useState(false);
+  const billRef = useRef<HTMLDivElement>(null);
 
   // Add-item form
   const [newProductId, setNewProductId] = useState<number | ''>('');
@@ -119,16 +126,34 @@ export default function PurchaseFormPage() {
       if (isEdit) {
         await api.put(`/purchases/${id}`, body);
         toast.success('خرید ویرایش شد');
+        navigate('/purchases');
       } else {
-        await api.post('/purchases', body);
+        const res = await api.post('/purchases', body);
         toast.success('خرید با موفقیت ثبت شد');
+        // Build bill data for printing
+        const supplier = suppliers.find(s => s.supplier_id === supplierId);
+        setBillData({
+          purchase_id: res.data.purchase_id || res.data.id || 0,
+          invoice_number: invoiceNumber || null,
+          supplier_name: supplier?.name || '',
+          payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
+          created_at: new Date().toISOString(),
+          due_date: dueDate || null,
+          items: items.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.unit_price })),
+          total_amount: totalAmount,
+          paid_amount: paidAmount,
+        });
+        setShowBillPreview(true);
       }
-      navigate('/purchases');
     } catch {
       toast.error('خطا در ثبت خرید');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   if (loading) return (
@@ -313,6 +338,43 @@ export default function PurchaseFormPage() {
           </button>
         </div>
       </div>
+
+      {/* ═══ After-save bill preview modal ═══ */}
+      {showBillPreview && billData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 print:hidden" onClick={() => { setShowBillPreview(false); navigate('/purchases'); }}>
+          <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800">خرید با موفقیت ثبت شد</h2>
+              <div className="flex gap-2">
+                <button onClick={handlePrint}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                  <FiPrinter className="w-4 h-4" /> چاپ بل
+                </button>
+                <button onClick={() => { setShowBillPreview(false); navigate(`/purchases/${billData.purchase_id}`); }}
+                  className="px-4 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-medium transition">
+                  مشاهده جزئیات
+                </button>
+                <button onClick={() => { setShowBillPreview(false); navigate('/purchases'); }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition">
+                  بازگشت
+                </button>
+              </div>
+            </div>
+            {/* Bill preview */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <PurchaseBill ref={billRef} data={billData} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Hidden print area ═══ */}
+      {billData && (
+        <div className="print-area hidden print:block">
+          <PurchaseBill data={billData} />
+        </div>
+      )}
     </div>
   );
 }
