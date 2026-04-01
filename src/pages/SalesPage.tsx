@@ -12,7 +12,9 @@ import {
   FiList,
   FiEye,
   FiDollarSign,
+  FiPrinter,
 } from 'react-icons/fi';
+import SaleBill, { type SaleBillData } from '../components/SaleBill';
 
 /* ───────── Types ───────── */
 interface Product {
@@ -147,6 +149,8 @@ function POSView() {
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [saleBillData, setSaleBillData] = useState<SaleBillData | null>(null);
+  const [showBillPreview, setShowBillPreview] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -255,7 +259,7 @@ function POSView() {
     setSubmitting(true);
     try {
       const selectedAccount = accounts.find(a => a.account_id === accountId);
-      await api.post('/sales', {
+      const res = await api.post('/sales', {
         customer_id: customerId || null,
         payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
         account_id: paymentMethod === 'account' ? (accountId || null) : null,
@@ -269,11 +273,27 @@ function POSView() {
         })),
       });
       toast.success('فروش با موفقیت ثبت شد');
+
+      // Build bill data for print
+      const customer = customers.find(c => c.customer_id === customerId);
+      setSaleBillData({
+        sale_id: res.data.sale_id || res.data.id || 0,
+        invoice_number: res.data.invoice_number || null,
+        customer_name: customer?.name || null,
+        payment_type: paymentMethod === 'sarafi' ? 'sarafi' : (selectedAccount?.type || 'cash'),
+        created_at: new Date().toISOString(),
+        items: cart.map(i => ({ name: i.name, quantity: i.quantity, unit_price: i.unit_price })),
+        subtotal,
+        discount,
+        total,
+        paid_amount: paidAmount,
+      });
+      setShowBillPreview(true);
+
       setCart([]);
       setCustomerId('');
       setDiscount(0);
       setPaidAmount(0);
-      barcodeRef.current?.focus();
     } catch {
       toast.error('خطا در ثبت فروش');
     } finally {
@@ -502,6 +522,39 @@ function POSView() {
           </button>
         </div>
       </div>
+
+      {/* ═══ After-sale bill preview modal ═══ */}
+      {showBillPreview && saleBillData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 print:hidden" onClick={() => setShowBillPreview(false)}>
+          <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800">فروش با موفقیت ثبت شد</h2>
+              <div className="flex gap-2">
+                <button onClick={() => window.print()}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                  <FiPrinter className="w-4 h-4" /> چاپ بل
+                </button>
+                <button onClick={() => setShowBillPreview(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition">
+                  بستن
+                </button>
+              </div>
+            </div>
+            {/* Bill preview */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <SaleBill data={saleBillData} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Hidden print area ═══ */}
+      {saleBillData && (
+        <div className="print-area hidden print:block">
+          <SaleBill data={saleBillData} />
+        </div>
+      )}
     </div>
   );
 }

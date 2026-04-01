@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { FiArrowLeft, FiPrinter, FiDollarSign, FiX } from 'react-icons/fi';
+import SaleBill from '../components/SaleBill';
 
 interface SaleItem {
   id: number;
@@ -313,6 +314,22 @@ export default function SaleDetailPage() {
 
       {/* Payment Modal */}
       {showPayment && <PaymentModal sale={sale} onClose={() => setShowPayment(false)} onUpdated={() => { setShowPayment(false); fetchSale(); }} />}
+
+      {/* ═══ Hidden print area — standard sale bill ═══ */}
+      <div className="print-area hidden print:block">
+        <SaleBill data={{
+          sale_id: sale.sale_id,
+          invoice_number: sale.invoice_number,
+          customer_name: sale.customer_name,
+          payment_type: sale.payment_type,
+          created_at: sale.date,
+          items: (sale.items || []).map(i => ({ name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })),
+          subtotal: Number(sale.total_amount),
+          discount: Number(sale.discount_amount),
+          total: Number(sale.total_amount) - Number(sale.discount_amount),
+          paid_amount: Number(sale.paid_amount),
+        }} />
+      </div>
     </div>
   );
 }
